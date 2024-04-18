@@ -198,13 +198,13 @@ async function handleChatCompletion({
             },
           ],
         };
-        streamRes.send(`data: ${JSON.stringify(response)}\n\n`);
+        streamRes.send(JSON.stringify(response));
       }
       fullContent = content.length > fullContent.length ? content : fullContent;
     }
     if (streamRes) {
       streamRes.send(
-        `data: ${JSON.stringify({
+        JSON.stringify({
           id: requestId,
           created: created,
           object: "chat.completion.chunk",
@@ -218,7 +218,7 @@ async function handleChatCompletion({
               finish_reason: finish_reason,
             },
           ],
-        })}\n\n`
+        })
       );
       streamRes.close();
     } else {
