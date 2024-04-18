@@ -3,12 +3,21 @@
   "version": "1.0.50",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch index.ts",
+    "start": "bun run index.ts"
   },
   "dependencies": {
-    "elysia": "latest"
+    "@elysiajs/bearer": "^1.0.2",
+    "@elysiajs/cors": "^1.0.2",
+    "@elysiajs/stream": "^1.0.2",
+    "@saintno/needed-tools": "^0.3.4",
+    "elysia": "latest",
+    "gpt-3-encoder": "^1.1.4",
+    "user-agents": "^1.1.177",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/user-agents": "^1.0.4",
     "bun-types": "latest"
   },
   "module": "src/index.js"
