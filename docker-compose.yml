@@ -7,5 +7,5 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - API_TOKEN=sk-1234567890abcdef
+      - API_TOKEN=
       - AGENT_ROLL_INTERVAL=60000

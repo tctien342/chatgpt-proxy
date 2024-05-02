@@ -1,6 +1,6 @@
 import UserAgent from "user-agents";
 import { getNewSession } from "./openai";
-import { AppLogger } from "./tools";
+import { AppLogger, randomIntTargetOffset } from "./tools";
 import { ENV } from "../env";
 import { sleep } from "bun";
 
@@ -19,7 +19,7 @@ export class AgentManager {
     while (true) {
       AppLogger.i("AgentManager", "Trigger rolling agent");
       this.roll();
-      await sleep(ENV.AGENT_ROLL_INTERVAL);
+      await sleep(randomIntTargetOffset(ENV.AGENT_ROLL_INTERVAL, 3000));
     }
   }
 
@@ -35,10 +35,10 @@ export class AgentManager {
       .catch((e) => {
         AppLogger.w(
           "AgentManager",
-          "Failed to get session ID, retry after 2s",
+          "Failed to get session ID, retry after 3s",
           e
         );
-        sleep(2000).then(() => this.roll());
+        sleep(randomIntTargetOffset(3000, 500)).then(() => this.roll());
       });
   }
 

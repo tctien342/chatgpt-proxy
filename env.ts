@@ -7,7 +7,15 @@ const ENVSchema = z.object({
     .string()
     .transform((v) => Number(v))
     .default("3000"),
-  API_TOKEN: z.string().default(randomUUID()),
+  API_TOKEN: z
+    .string()
+    .default("")
+    .transform((val) => {
+      if (!val) {
+        return "sk-" + randomUUID().replaceAll("-", "");
+      }
+      return val;
+    }),
   /**
    * Auto generate new token and fetch agent for openAI
    * @default 1 minute
