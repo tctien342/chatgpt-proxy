@@ -7,6 +7,10 @@ const ENVSchema = z.object({
     .string()
     .transform((v) => Number(v))
     .default("3000"),
+  MAX_SESSION_TRIES: z
+    .string()
+    .transform((v) => Number(v))
+    .default("3"),
   API_TOKEN: z
     .string()
     .default("")

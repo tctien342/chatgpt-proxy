@@ -150,7 +150,12 @@ async function handleChatCompletion({
    */
   streamRes?: Stream<string | number | boolean | object>;
 }) {
-  const session = await AgentManager.getInstance().roll();
+  const session = await AgentManager.getInstance()
+    .roll()
+    .catch((e) => {
+      AppLogger.w("handleChatCompletion", "Failed to get a new session", e);
+      return null;
+    });
 
   if (!session) {
     const resp = {

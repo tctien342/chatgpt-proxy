@@ -17,9 +17,14 @@ export class AgentManager {
   /**
    * Rolls the agent by generating a new session ID and updating the token and device ID.
    */
-  async roll(): Promise<Session> {
+  async roll(tries = 0): Promise<Session> {
     AppLogger.i("AgentManager", "Trigger rolling agent");
-    this.userAgent.random();
+    this.session = undefined;
+    if (tries === ENV.MAX_SESSION_TRIES) {
+      throw new Error(
+        `Failed to get session ID after ${ENV.MAX_SESSION_TRIES} retries`
+      );
+    }
     return await getNewSession()
       .then((session) => {
         this.session = session;
@@ -32,7 +37,7 @@ export class AgentManager {
           e
         );
         await sleep(randomIntTargetOffset(3000, 500));
-        return await this.roll();
+        return await this.roll(tries + 1);
       });
   }
 
