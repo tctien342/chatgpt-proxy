@@ -150,7 +150,7 @@ async function handleChatCompletion({
    */
   streamRes?: Stream<string | number | boolean | object>;
 }) {
-  const session = AgentManager.getInstance().crrSession;
+  const session = await AgentManager.getInstance().roll();
 
   if (!session) {
     const resp = {
@@ -226,7 +226,6 @@ async function handleChatCompletion({
         }
       }
 
-      console.log(parsed, content, status);
       switch (status) {
         case "in_progress":
           finish_reason = null;

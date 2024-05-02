@@ -12,33 +12,27 @@ export class AgentManager {
 
   private constructor() {
     this.userAgent = new UserAgent();
-    this.autoRoll();
-  }
-
-  private async autoRoll() {
-    while (true) {
-      AppLogger.i("AgentManager", "Trigger rolling agent");
-      this.roll();
-      await sleep(randomIntTargetOffset(ENV.AGENT_ROLL_INTERVAL, 3000));
-    }
   }
 
   /**
    * Rolls the agent by generating a new session ID and updating the token and device ID.
    */
-  private roll() {
+  async roll(): Promise<Session> {
+    AppLogger.i("AgentManager", "Trigger rolling agent");
     this.userAgent.random();
-    getNewSession()
+    return await getNewSession()
       .then((session) => {
         this.session = session;
+        return session;
       })
-      .catch((e) => {
+      .catch(async (e) => {
         AppLogger.w(
           "AgentManager",
           "Failed to get session ID, retry after 3s",
           e
         );
-        sleep(randomIntTargetOffset(3000, 500)).then(() => this.roll());
+        await sleep(randomIntTargetOffset(3000, 500));
+        return await this.roll();
       });
   }
 
