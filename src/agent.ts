@@ -1,5 +1,5 @@
 import UserAgent from "user-agents";
-import { getNewSessionId } from "./openai";
+import { getNewSession } from "./openai";
 import { AppLogger } from "./tools";
 import { ENV } from "../env";
 import { sleep } from "bun";
@@ -8,8 +8,7 @@ export class AgentManager {
   static instance: AgentManager;
 
   private userAgent: UserAgent;
-  private token?: string;
-  private oaiDeviceId?: string;
+  private session?: Session;
 
   private constructor() {
     this.userAgent = new UserAgent();
@@ -29,10 +28,9 @@ export class AgentManager {
    */
   private roll() {
     this.userAgent.random();
-    getNewSessionId()
-      .then(({ token, newDeviceId }) => {
-        this.token = token;
-        this.oaiDeviceId = newDeviceId;
+    getNewSession()
+      .then((session) => {
+        this.session = session;
       })
       .catch((e) => {
         AppLogger.w(
@@ -50,8 +48,8 @@ export class AgentManager {
 
   get openAiHeaders(): HeadersInit {
     return {
-      "oai-device-id": this.oaiDeviceId ?? "",
-      "openai-sentinel-chat-requirements-token": this.token ?? "",
+      "oai-device-id": this.session?.deviceId ?? "",
+      "openai-sentinel-chat-requirements-token": this.session?.token ?? "",
     };
   }
 
@@ -60,5 +58,9 @@ export class AgentManager {
       AgentManager.instance = new AgentManager();
     }
     return AgentManager.instance;
+  }
+
+  get crrSession() {
+    return this.session;
   }
 }

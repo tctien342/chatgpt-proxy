@@ -4,12 +4,12 @@
 import { Fetcher } from "./fetch";
 import { ENV } from "../env";
 
-import { randomUUID } from "node:crypto";
+import { randomUUID, randomInt, createHash } from "node:crypto";
 import { encode } from "gpt-3-encoder";
 import Stream from "@elysiajs/stream";
 import { AgentManager } from "./agent";
-import { APIQueueItem } from "@saintno/needed-tools";
 import { AppLogger } from "./tools";
+import { sha3_512 } from "js-sha3";
 
 const apiUrl = `${ENV.BASE_URL}/backend-anon/conversation`;
 
@@ -75,25 +75,63 @@ async function* streamCompletion(data: any) {
  * Generates a new session ID and token for the OpenAI API.
  * @returns An object containing the new device ID and token.
  */
-async function getNewSessionId() {
+async function getNewSession(): Promise<Session> {
   let newDeviceId = randomUUID();
-  const data = await new Fetcher(
+  const session = await new Fetcher(
     `${ENV.BASE_URL}/backend-anon/sentinel/chat-requirements`
   )
     .json()
-    .post<{ token: string }>(
+    .post<Session>(
       {},
       {
         headers: { "oai-device-id": newDeviceId },
       }
     );
   AppLogger.i(
-    "getNewSessionId",
+    "getNewSession",
     `System: Successfully refreshed session ID and token. ${
-      !data.token ? "(Now it's ready to process requests)" : ""
+      !session.token ? "(Now it's ready to process requests)" : ""
     }`
   );
-  return { newDeviceId, token: data.token };
+  session.deviceId = newDeviceId;
+  return session;
+}
+
+/**
+ * Generates a proof token for the OpenAI API.
+ */
+function GenerateProofToken(
+  seed: string,
+  diff: string,
+  userAgent: string
+): string {
+  const cores: number[] = [8, 12, 16, 24];
+  const screens: number[] = [3000, 4000, 6000];
+
+  const core = cores[randomInt(0, cores.length)];
+  const screen = screens[randomInt(0, screens.length)];
+
+  const now = new Date(Date.now() - 8 * 3600 * 1000);
+  const parseTime = now.toUTCString().replace("GMT", "GMT-0500 (Eastern Time)");
+
+  const config = [core + screen, parseTime, 4294705152, 0, userAgent];
+
+  const diffLen = diff.length / 2;
+
+  for (let i = 0; i < 100000; i++) {
+    config[3] = i;
+    const jsonData = JSON.stringify(config);
+    const base = Buffer.from(jsonData).toString("base64");
+    const hashValue = sha3_512.create().update(seed + base);
+
+    if (hashValue.hex().substring(0, diffLen) <= diff) {
+      const result = "gAAAAAB" + base;
+      return result;
+    }
+  }
+
+  const fallbackBase = Buffer.from(`"${seed}"`).toString("base64");
+  return "gAAAAABwQ8Lk5FbGpA2NcR9dShT6gYjU7VxZ4D" + fallbackBase;
 }
 
 /**
@@ -112,6 +150,32 @@ async function handleChatCompletion({
    */
   streamRes?: Stream<string | number | boolean | object>;
 }) {
+  const session = AgentManager.getInstance().crrSession;
+
+  if (!session) {
+    const resp = {
+      status: false,
+      error: {
+        message: `Error getting a new session, please try again later, if the issue persists, please open an issue on the GitHub repository, https://github.com/PawanOsman/ChatGPT`,
+        type: "invalid_request_error",
+      },
+      support: "https://discord.pawan.krd",
+    };
+    if (streamRes) {
+      streamRes.send(JSON.stringify(resp));
+      streamRes.close();
+    } else {
+      return resp;
+    }
+    return;
+  }
+
+  let proofToken = GenerateProofToken(
+    session.proofofwork.seed,
+    session.proofofwork.difficulty,
+    AgentManager.getInstance().userAgentString
+  );
+
   let promptTokens = 0;
   let completionTokens = 0;
   const body = {
@@ -138,7 +202,10 @@ async function handleChatCompletion({
     let requestId = generateCompletionId("chatcmpl-");
 
     const response = await new Fetcher(apiUrl).post<Response>(body, {
-      headers: AgentManager.getInstance().openAiHeaders,
+      headers: {
+        ...AgentManager.getInstance().openAiHeaders,
+        "openai-sentinel-proof-token": proofToken,
+      },
     });
     if (!response.ok || !response.body) {
       throw new Error("An error occurred while processing the request.");
@@ -159,6 +226,7 @@ async function handleChatCompletion({
         }
       }
 
+      console.log(parsed, content, status);
       switch (status) {
         case "in_progress":
           finish_reason = null;
@@ -268,6 +336,6 @@ export {
   chunksToLines,
   linesToMessages,
   streamCompletion,
-  getNewSessionId,
+  getNewSession,
   handleChatCompletion,
 };
